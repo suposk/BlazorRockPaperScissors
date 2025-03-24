@@ -1,0 +1,141 @@
+﻿@using MudBlazorRokPaperScissors.Domain;
+@using MudBlazorRokPaperScissors.Components.FeatureComp;
+@inherits AppComponenDisposableBase;
+
+@if(IsGameReady)
+{
+    <MudText>Click "New Draw" button and then select on option</MudText>
+    <MudButton Color="Color.Secondary" Variant="Variant.Filled"
+    Disabled=@(IsStartGameDisabled)
+    OnClick=StartDraw>
+        New Draw
+    </MudButton>
+    <br />
+    <br />
+
+    <MudPaper Class="d-flex flex-wrap gap-4" Elevation="0">    
+        @if (playerHuman is not null)
+        {
+            <PlayerComp IsDisabledInParam=IsPlayerDisabled PlayerInParam="@playerHuman"></PlayerComp>
+        }
+        @if (playerComputer is not null)
+        {
+            <PlayerComp IsDisabledInParam=IsPlayerDisabled PlayerInParam="@playerComputer"></PlayerComp>
+        }    
+    </MudPaper>
+    <br />
+    <br />
+    <MudText Color="Color.Error" Typo="Typo.h6">Game Score: @Game?.CurrentScore</MudText>
+
+    @if (LastGameDrawResult != null)
+    {
+        <br />
+        <br />
+        <MudText Typo="Typo.h6">Result:</MudText>
+        if (LastGameDrawResult.Result == ResultType.Draw)
+        {
+            <MudText Style="color:blue">Draw</MudText>
+        }
+        else
+        {
+            <MudText Style="color:green">Winner: @LastGameDrawResult.WinnerName</MudText>
+            <MudText Style="color:red">Loser: @LastGameDrawResult.LosserName</MudText>
+        }
+        foreach (var item in LastGameDrawResult.Draws)
+        {
+            <MudText>Player @item.PlayerName picked -> @item.Draw</MudText>
+        }
+    }
+    @if (Game?.DrawResults?.Any() == true)
+    {
+        <MudDataGrid Items="@Game?.DrawResults" RowsPerPage="@RowsPerPage">
+            <Columns>
+                <PropertyColumn Property="x => x.TimeUtc" Title="TimeUtc" />
+                <PropertyColumn Property="x => x.WinnerName" Title="Winner" />
+                <PropertyColumn Property="x => x.LosserName" Title="Losser" />
+                <PropertyColumn Property="x => x.Result" />                
+                <TemplateColumn CellClass="d-flex justify-end">
+                    <CellTemplate>
+                        <MudStack Row=false>
+                            <MudText>@context.Item.Draws[0].ToString()</MudText>
+                            <MudText>@context.Item.Draws[1].ToString()</MudText>
+                        </MudStack>
+                    </CellTemplate>
+                </TemplateColumn>
+            </Columns>
+            <PagerContent>
+                <MudDataGridPager 
+                T="GameDrawResult"
+                PageSizeOptions="new int[] { 5, 10, 30, 50 }" />
+            </PagerContent>
+        </MudDataGrid>
+    }
+}
+else
+{
+    <MudText>Game is not ready. Please enter your name and click button</MudText>
+    <MudTextField Placeholder="Enter your Name"
+        @bind-Value=@PlayerName MaxLength="20"
+        Label="Name" Variant="Variant.Outlined">
+    </MudTextField>
+
+    <MudButton Color="Color.Secondary" Variant="Variant.Filled"
+    Disabled=@(IsStartGameDisabled || IsGameReady)
+    OnClick=CreatePlayerAndGame>
+        Create Player and Start new Game
+    </MudButton>
+}
+
+@code {
+
+    [Inject]
+    public IDateTimeService DateTimeService { get; set; }
+
+    public string PlayerName { get; set; } = "Player-1";    
+    public Player? playerHuman;
+    public Player playerComputer = new Player(PlayerType.Computer, "player-computer", "id-" + nameof(PlayerType.Computer));
+
+    public Game? Game { get; set; }
+    public GameDrawResult? LastGameDrawResult { get; private set; }
+
+    public bool IsPlayerDisabled => !IsStartGameDisabled;
+    public bool IsStartGameDisabled { get; set; } = false;
+
+    public bool IsGameReady => Game is not null && Game?.Players.Count == Game.Constants.MaxPlayers;
+    public int RowsPerPage { get; set; } = 5;
+
+    private void Game_OnGameDrawResult(object sender, GameDrawResultEventArgs e)
+    {
+        LastGameDrawResult = e.GameDrawResult;
+        IsStartGameDisabled = false;
+        StateHasChanged();
+    }
+
+    public void StartDraw()
+    {
+        IsStartGameDisabled = true;
+        LastGameDrawResult = null;
+        StateHasChanged();
+    }
+
+    public void CreatePlayerAndGame()
+    {
+        playerHuman = new Player(PlayerType.Human, PlayerName, "id-" + PlayerName);
+        var res = Game.CreateGame(playerHuman, playerComputer, DateTimeService, setUpGame: true);
+        if (res.IsSuccess && res.Value is not null)
+        {
+            Game = res.Value;
+            Game.GameDrawResult += Game_OnGameDrawResult;
+            IsStartGameDisabled = false;
+        }        
+        StateHasChanged();
+    }
+
+    public override void Dispose()
+    {
+        base.Dispose();
+        Game?.Dispose();
+        if (Game != null)
+            Game.GameDrawResult -= Game_OnGameDrawResult;
+    }
+}

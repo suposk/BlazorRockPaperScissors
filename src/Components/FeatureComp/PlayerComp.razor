@@ -1,0 +1,71 @@
+﻿@using MudBlazorRokPaperScissors.Domain;
+@using MudBlazorRokPaperScissors.Components.FeatureComp;
+
+@if (PlayerInParam.PlayerType == PlayerType.Human)
+{
+    <MudText Typo="Typo.h6" GutterBottom="true">@PlayerInParam?.Name is @PlayerInParam?.PlayerType</MudText>
+    <MudButtonGroup Color="Color.Primary" Variant="Variant.Outlined">
+        <MudButton Disabled=IsDisabled OnClick="(e => DrawHandler(DrawType.Rock))">Rock</MudButton>
+        <MudButton Disabled=IsDisabled OnClick="(e => DrawHandler(DrawType.Paper))">Paper</MudButton>
+        <MudButton Disabled=IsDisabled OnClick="(e => DrawHandler(DrawType.Scissors))">Scissors</MudButton>
+    </MudButtonGroup>
+}
+else if (PlayerInParam.PlayerType == PlayerType.Computer && IsDisabledInParam)
+{
+    <MudText Typo="Typo.h6" GutterBottom="true">@PlayerInParam?.PlayerType</MudText>
+    <MudText Typo="Typo.h6" GutterBottom="true">has draw -> {@CumputerDraw}</MudText>
+}
+
+@code {
+    [Parameter]
+    public Player PlayerInParam { get; set; }
+
+    private bool _IsDisabledInParam;
+    [Parameter]
+    public bool IsDisabledInParam 
+    {
+        get => _IsDisabledInParam; 
+        set 
+        {
+            if (value != _IsDisabledInParam)
+            {                
+                _IsDisabledInParam = value;
+                if (_IsDisabledInParam)                
+                    SelectedDraw = null;                                                                       
+                else
+                    InvokeAsync(() => RandomDrawAsync());
+                StateHasChanged();
+            }            
+        }
+    }
+
+    [Inject]
+    public IDateTimeService DateTimeService { get; set; }
+
+    public bool IsDisabled => IsDisabledInParam || SelectedDraw.HasValue;
+
+    public DrawType? SelectedDraw { get; set; }
+    public DrawType? CumputerDraw { get; set; }
+
+    public void DrawHandler(DrawType drawType)
+    {        
+        SelectedDraw = drawType;
+        PlayerInParam.SelectDraw(drawType);
+
+        StateHasChanged();
+    }
+    
+    private async Task RandomDrawAsync()
+    {
+        if (PlayerInParam is null || PlayerInParam.PlayerType != PlayerType.Computer)        
+            return;
+
+        CumputerDraw = null;
+        await Task.Delay(200);
+        //always generate new random seed to avoid predictable results
+        Random random = new Random(DateTimeService.UtcNow.Millisecond);
+        var drawType = (DrawType)random.Next(1, 3);
+        CumputerDraw = drawType;
+        DrawHandler(drawType);
+    }
+}
