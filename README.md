@@ -4,6 +4,9 @@
 BlazorRockPaperScissors is a web-based implementation of the classic game Rock Paper Scissors, 
 built using Blazor, a framework for building interactive web UIs with .NET. 
 
+The game allows two players to compete against each other by selecting one of three moves: Rock, Paper, or Scissors.
+Also can play against the computer, if click Play agains computer
+
 ## Prerequisites
 - [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
 - [Visual Studio 2022](https://visualstudio.microsoft.com/vs/) with the ASP.NET and web development workload installed (or VS Code)
