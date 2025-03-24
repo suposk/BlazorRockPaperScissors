@@ -14,9 +14,13 @@
     <br />
 
     <MudPaper Class="d-flex flex-wrap gap-4" Elevation="0">    
-        @if (playerHuman is not null)
+        @if (playerHuman1 is not null)
         {
-            <PlayerComp IsDisabledInParam=IsPlayerDisabled PlayerInParam="@playerHuman"></PlayerComp>
+            <PlayerComp IsDisabledInParam=IsPlayerDisabled PlayerInParam="@playerHuman1"></PlayerComp>
+        }
+        @if (playerHuman2 is not null)
+        {
+            <PlayerComp IsDisabledInParam=IsPlayerDisabled PlayerInParam="@playerHuman2"></PlayerComp>
         }
         @if (playerComputer is not null)
         {
@@ -74,10 +78,18 @@
 else
 {
     <MudText>Game is not ready. Please enter your name and click button</MudText>
-    <MudTextField Placeholder="Enter your Name"
-        @bind-Value=@PlayerName MaxLength="20"
-        Label="Name" Variant="Variant.Outlined">
+    <MudTextField Placeholder="Enter your Name 1"
+    @bind-Value=@PlayerName1 MaxLength="20"
+    Label="Name 1" Variant="Variant.Outlined">
     </MudTextField>
+    <MudCheckBox @bind-Value="PlayWithComputer" Color="Color.Primary" Label="Play agains computer"></MudCheckBox>
+    if (!PlayWithComputer)
+    {
+        <MudTextField Placeholder="Enter your Name 2"
+        @bind-Value=@PlayerName2 MaxLength="20"
+        Label="Name 2" Variant="Variant.Outlined">
+        </MudTextField>
+    }
 
     <MudButton Color="Color.Secondary" Variant="Variant.Filled"
     Disabled=@(IsStartGameDisabled || IsGameReady)
@@ -91,15 +103,18 @@ else
     [Inject]
     public IDateTimeService DateTimeService { get; set; }
 
-    public string PlayerName { get; set; } = "Player-1";    
-    public Player? playerHuman;
-    public Player playerComputer = new Player(PlayerType.Computer, "player-computer", "id-" + nameof(PlayerType.Computer));
+    public string PlayerName1 { get; set; } = "Player-1";
+    public string PlayerName2 { get; set; } = "Player-2";
+    public Player? playerHuman1;
+    public Player? playerHuman2;
+    public Player? playerComputer ;
 
     public Game? Game { get; set; }
     public GameDrawResult? LastGameDrawResult { get; private set; }
 
     public bool IsPlayerDisabled => !IsStartGameDisabled;
     public bool IsStartGameDisabled { get; set; } = false;
+    public bool PlayWithComputer { get; set; } = false;
 
     public bool IsGameReady => Game is not null && Game?.Players.Count == Game.Constants.MaxPlayers;
     public int RowsPerPage { get; set; } = 5;
@@ -120,8 +135,18 @@ else
 
     public void CreatePlayerAndGame()
     {
-        playerHuman = new Player(PlayerType.Human, PlayerName, "id-" + PlayerName);
-        var res = Game.CreateGame(playerHuman, playerComputer, DateTimeService, setUpGame: true);
+        playerHuman1 = new Player(PlayerType.Human, PlayerName1, "id-" + PlayerName1);
+        ResultCom<Game> res;
+        if (PlayWithComputer)
+        {
+            playerComputer = new Player(PlayerType.Computer, "player-computer", "id-" + nameof(PlayerType.Computer));
+            res = Game.CreateGame(playerHuman1, playerComputer, DateTimeService, setUpGame: true);
+        }
+        else
+        {
+            playerHuman2 = new Player(PlayerType.Human, PlayerName2, "id-" + PlayerName2);
+            res = Game.CreateGame(playerHuman1, playerHuman2, DateTimeService, setUpGame: true);
+        }        
         if (res.IsSuccess && res.Value is not null)
         {
             Game = res.Value;
